@@ -81,7 +81,6 @@ def openai_classifier(model: str, max_output_tokens: int = 500) -> Classifier:
                 {"role": "user", "content": json.dumps(evidence, ensure_ascii=False, indent=2)},
             ],
             text_format=AC21Assessment,
-            temperature=0,
             max_output_tokens=max_output_tokens,
             store=False,
         )
