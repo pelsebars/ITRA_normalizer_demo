@@ -167,13 +167,16 @@ def usage_today(connection: sqlite3.Connection) -> dict[str, int]:
     return dict(row)
 
 
-def _reserve_job(
+def reserve_api_job(
     connection: sqlite3.Connection,
     input_hash: str,
     model: str,
     planned_calls: int,
     max_jobs_per_day: int,
     max_api_calls_per_day: int,
+    *,
+    action: str = "normalize_ac21",
+    prompt_version: str = PROMPT_VERSION,
 ) -> int:
     try:
         connection.execute("BEGIN IMMEDIATE")
@@ -188,7 +191,7 @@ def _reserve_job(
             "SELECT COUNT(*) FROM normalization_jobs WHERE status='running'"
         ).fetchone()[0]
         if active:
-            raise NormalizationBlocked("Another normalization job is already running.")
+            raise NormalizationBlocked("Another paid action is already running.")
         totals = connection.execute(
             """SELECT COUNT(*) AS jobs,
                       COALESCE(SUM(planned_api_calls), 0) AS calls
@@ -196,14 +199,14 @@ def _reserve_job(
             (_utc_day_start(),),
         ).fetchone()
         if totals["jobs"] >= max_jobs_per_day:
-            raise NormalizationBlocked("The daily normalization job limit has been reached.")
+            raise NormalizationBlocked("The daily paid-action limit has been reached.")
         if totals["calls"] + planned_calls > max_api_calls_per_day:
             raise NormalizationBlocked("This job would exceed the daily OpenAI API call limit.")
         cursor = connection.execute(
             """INSERT INTO normalization_jobs(
                  action, input_hash, model, prompt_version, started_at, status, planned_api_calls
-               ) VALUES ('normalize_ac21', ?, ?, ?, ?, 'running', ?)""",
-            (input_hash, model, PROMPT_VERSION, _utc_now(), planned_calls),
+               ) VALUES (?, ?, ?, ?, ?, 'running', ?)""",
+            (action, input_hash, model, prompt_version, _utc_now(), planned_calls),
         )
         connection.commit()
         return int(cursor.lastrowid)
@@ -212,26 +215,36 @@ def _reserve_job(
         raise
 
 
-def _record_call(connection: sqlite3.Connection, job_id: int, model: str, result: ClassificationResult) -> None:
+def record_api_usage(
+    connection: sqlite3.Connection,
+    job_id: int,
+    model: str,
+    *,
+    action: str = "normalize_ac21",
+    response_id: str = "",
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    total_tokens: int = 0,
+) -> None:
     connection.execute(
         """INSERT INTO api_usage_events(
              job_id, occurred_at, action, model, response_id,
              input_tokens, output_tokens, total_tokens, status
-           ) VALUES (?, ?, 'normalize_ac21', ?, ?, ?, ?, ?, 'completed')""",
-        (job_id, _utc_now(), model, result.response_id, result.input_tokens,
-         result.output_tokens, result.total_tokens),
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')""",
+        (job_id, _utc_now(), action, model, response_id or None, input_tokens,
+         output_tokens, total_tokens),
     )
     connection.execute(
         """UPDATE normalization_jobs SET
              actual_api_calls=actual_api_calls+1,
              input_tokens=input_tokens+?, output_tokens=output_tokens+?, total_tokens=total_tokens+?
            WHERE job_id=?""",
-        (result.input_tokens, result.output_tokens, result.total_tokens, job_id),
+        (input_tokens, output_tokens, total_tokens, job_id),
     )
     connection.commit()
 
 
-def _finish_job(connection: sqlite3.Connection, job_id: int, status: str, error: str = "") -> None:
+def finish_api_job(connection: sqlite3.Connection, job_id: int, status: str, error: str = "") -> None:
     connection.execute(
         "UPDATE normalization_jobs SET status=?, finished_at=?, error=? WHERE job_id=?",
         (status, _utc_now(), error[:1000] or None, job_id),
@@ -267,7 +280,7 @@ def normalize_ac21(
         return NormalizationSummary(0, cached_sites, 0, 0, 0, 0)
 
     batch_hash = hashlib.sha256("".join(item[2] for item in work).encode()).hexdigest()
-    job_id = _reserve_job(
+    job_id = reserve_api_job(
         connection, batch_hash, model, len(work) * runs,
         max_jobs_per_day, max_api_calls_per_day,
     )
@@ -279,7 +292,15 @@ def normalize_ac21(
                 raw_result = classifier(evidence)
                 result = raw_result if isinstance(raw_result, ClassificationResult) else ClassificationResult(raw_result)
                 assessments.append(result.assessment)
-                _record_call(connection, job_id, model, result)
+                record_api_usage(
+                    connection,
+                    job_id,
+                    model,
+                    response_id=result.response_id,
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                    total_tokens=result.total_tokens,
+                )
                 usage["api_calls"] += 1
                 usage["input_tokens"] += result.input_tokens
                 usage["output_tokens"] += result.output_tokens
@@ -300,8 +321,8 @@ def normalize_ac21(
                  agreement, model, PROMPT_VERSION, fingerprint, _utc_now(), row["site_id"]),
             )
             connection.commit()
-        _finish_job(connection, job_id, "completed")
+        finish_api_job(connection, job_id, "completed")
     except Exception as exc:
-        _finish_job(connection, job_id, "failed", str(exc))
+        finish_api_job(connection, job_id, "failed", str(exc))
         raise
     return NormalizationSummary(len(work), cached_sites, **usage)

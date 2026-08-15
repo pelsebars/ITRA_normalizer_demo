@@ -12,8 +12,10 @@ A functional vertical slice for normalizing synthetic IT Risk Assessments. The f
 - Presents raw evidence and normalized results in Streamlit.
 - Protects paid actions with an access code, server-side quotas, result caching, and a kill switch.
 - Records API calls and token usage in SQLite for demo-cost visibility.
+- Flags low agreement and reconciliation findings explicitly for QA review.
+- Includes a managed OpenAI file-search Q&A surface with source-file citations.
 
-PDF parsing, all-control normalization, managed file-search RAG, dashboarding, and the combined SQL/RAG chat agent are subsequent slices.
+PDF parsing, all-control normalization, dashboarding, and the combined SQL/RAG chat agent are subsequent slices.
 
 ## Run locally
 
@@ -73,10 +75,22 @@ OPENAI_CALLS_ENABLED=true
 MAX_NORMALIZATION_JOBS_PER_DAY=10
 MAX_GLOBAL_API_CALLS_PER_DAY=100
 MAX_OUTPUT_TOKENS=500
-ITRA_DB_PATH=/app/data/itra.db
+ITRA_DB_PATH=/app/storage/itra.db
+OPENAI_VECTOR_STORE_ID=<vector-store-id>
+RAG_MAX_RESULTS=5
 ```
 
-Attach a Railway volume at `/app/data` before enabling paid actions. The public app remains readable without the access code; only OpenAI-backed actions require it.
+Attach a Railway volume at `/app/storage` before enabling paid actions. The public app remains readable without the access code; only OpenAI-backed actions require it.
+
+## Create the RAG knowledge base
+
+Run the indexing script once from a trusted shell with the project-scoped API key exported:
+
+```bash
+python scripts/create_vector_store.py
+```
+
+The script creates a new OpenAI vector store, uploads both synthetic PDFs, waits for indexing, and prints an `OPENAI_VECTOR_STORE_ID=...` line. Add that value to Railway. Never pass the API key as a command-line argument or commit it. File-search questions use one API request each and share the same access code, kill switch, daily quotas, spend limit, and usage ledger as normalization.
 
 To stop all paid actions without taking the read-only demo offline, set:
 

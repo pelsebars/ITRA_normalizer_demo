@@ -22,6 +22,7 @@ from itra_normalizer.normalization import (
     openai_classifier,
     usage_today,
 )
+from itra_normalizer.rag import ask_evidence
 
 
 st.set_page_config(page_title="ITRA Normalizer", page_icon="🛡️", layout="wide")
@@ -31,7 +32,7 @@ ingest_fixtures(connection, ROOT / "data/parsed", ROOT / "data/control_catalog.j
 usage = usage_today(connection)
 
 st.title("ITRA Normalizer")
-st.caption("Demo environment · Synthetic data only · AC.2.1 vertical slice")
+st.caption("Demo environment · Synthetic data only · AC.2.1 normalized across two ITRAs")
 
 if "api_authorized" not in st.session_state:
     st.session_state.api_authorized = False
@@ -66,7 +67,7 @@ with st.sidebar:
 
     st.subheader("Today's safeguards")
     st.metric(
-        "Normalization jobs",
+        "Paid actions",
         f"{usage['jobs']} / {settings.max_normalization_jobs_per_day}",
     )
     st.metric(
@@ -122,6 +123,10 @@ st.info(
     "Both sites report Compliant and answer No/No – routine users in S.7. "
     "Only the detailed control evidence reveals whether a shared engineering login exists."
 )
+st.caption(
+    "Scope: this vertical slice normalizes AC.2.1 across both ITRAs. Other controls are loaded "
+    "as source data but are not yet normalized."
+)
 
 summary_rows = []
 for row in rows:
@@ -138,10 +143,21 @@ for row in rows:
     })
 st.dataframe(pd.DataFrame(summary_rows), hide_index=True, width="stretch")
 
+review_rows = [row for row in rows if row["needs_review"]]
+if review_rows:
+    st.warning(
+        f"QA review required for {len(review_rows)} of {len(rows)} sites. "
+        "A reconciliation finding or disagreement between repeated model runs triggered review."
+    )
+
 st.subheader("Evidence and reconciliation")
 for row in rows:
     badge = row["status_reconciled"] or "Not normalized"
     with st.expander(f"{row['site_name']} · {badge}", expanded=True):
+        if row["needs_review"]:
+            st.warning(
+                f"QA review required · model agreement {row['llm_agreement_rate'] or 'not available'}"
+            )
         left, right = st.columns(2)
         with left:
             st.markdown("**Raw evidence**")
@@ -159,3 +175,52 @@ for row in rows:
                 )
             else:
                 st.warning("Unlock and run normalization to generate this assessment.")
+
+st.divider()
+st.subheader("Ask the source evidence")
+st.caption(
+    "Managed retrieval over the two synthetic ITRA PDFs. Answers are generated from retrieved "
+    "document evidence and show the cited source files."
+)
+
+rag_ready = paid_actions_ready and bool(settings.vector_store_id)
+if not settings.vector_store_id:
+    st.info("RAG is not configured yet. Set OPENAI_VECTOR_STORE_ID after indexing the PDFs.")
+
+with st.form("rag_question_form"):
+    question = st.text_input(
+        "Question",
+        placeholder="Which site describes shared interactive accounts, and what is the exception?",
+        max_chars=1000,
+        disabled=not rag_ready,
+    )
+    ask_clicked = st.form_submit_button(
+        "Ask evidence",
+        disabled=not rag_ready,
+        type="primary",
+    )
+
+if ask_clicked:
+    try:
+        with st.spinner("Searching the ITRA evidence…"):
+            answer = ask_evidence(
+                connection,
+                question,
+                model=settings.model,
+                vector_store_id=settings.vector_store_id,
+                max_results=settings.rag_max_results,
+                max_output_tokens=settings.max_output_tokens,
+                calls_enabled=settings.openai_calls_enabled,
+                max_jobs_per_day=settings.max_normalization_jobs_per_day,
+                max_api_calls_per_day=settings.max_global_api_calls_per_day,
+            )
+        st.markdown(answer.text)
+        if answer.citations:
+            st.caption("Sources: " + " · ".join(citation.filename for citation in answer.citations))
+        else:
+            st.warning("The response contained no file citation. Treat it as unverified.")
+        st.caption(f"Response {answer.response_id} · {answer.total_tokens:,} tokens")
+    except (NormalizationBlocked, ValueError) as exc:
+        st.warning(str(exc))
+    except Exception as exc:
+        st.error(f"Evidence query failed safely: {exc}")

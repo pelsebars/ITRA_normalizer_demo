@@ -15,6 +15,8 @@ class Settings:
     max_normalization_jobs_per_day: int
     max_global_api_calls_per_day: int
     max_output_tokens: int
+    vector_store_id: str
+    rag_max_results: int
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -36,7 +38,8 @@ def get_settings() -> Settings:
     max_jobs = int(os.getenv("MAX_NORMALIZATION_JOBS_PER_DAY", "10"))
     max_calls = int(os.getenv("MAX_GLOBAL_API_CALLS_PER_DAY", "100"))
     max_output_tokens = int(os.getenv("MAX_OUTPUT_TOKENS", "500"))
-    if min(max_jobs, max_calls, max_output_tokens) < 1:
+    rag_max_results = int(os.getenv("RAG_MAX_RESULTS", "5"))
+    if min(max_jobs, max_calls, max_output_tokens, rag_max_results) < 1:
         raise ValueError("Usage limits must be positive integers")
     return Settings(
         db_path=Path(os.getenv("ITRA_DB_PATH", "data/itra.db")),
@@ -47,4 +50,6 @@ def get_settings() -> Settings:
         max_normalization_jobs_per_day=max_jobs,
         max_global_api_calls_per_day=max_calls,
         max_output_tokens=max_output_tokens,
+        vector_store_id=os.getenv("OPENAI_VECTOR_STORE_ID", "").strip(),
+        rag_max_results=rag_max_results,
     )
