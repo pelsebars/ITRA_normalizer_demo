@@ -61,7 +61,7 @@ with st.sidebar:
             st.rerun()
 
     if not settings.openai_calls_enabled:
-        st.warning("OpenAI kill switch is OFF. The demo is read-only.")
+        st.warning("OpenAI calls are disabled by the kill switch. The demo is read-only.")
     if not os.getenv("OPENAI_API_KEY"):
         st.warning("OPENAI_API_KEY is not configured.")
 
