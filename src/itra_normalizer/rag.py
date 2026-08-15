@@ -24,9 +24,18 @@ class Citation:
 
 
 @dataclass(frozen=True)
+class EvidenceSnippet:
+    filename: str
+    file_id: str
+    score: float | None
+    text: str
+
+
+@dataclass(frozen=True)
 class RagAnswer:
     text: str
     citations: tuple[Citation, ...]
+    evidence: tuple[EvidenceSnippet, ...]
     response_id: str
     input_tokens: int
     output_tokens: int
@@ -49,6 +58,27 @@ def _citations(response: Any) -> tuple[Citation, ...]:
                     seen.add(key)
                     found.append(Citation(filename=key[0], file_id=key[1]))
     return tuple(found)
+
+
+def _evidence_snippets(response: Any) -> tuple[EvidenceSnippet, ...]:
+    payload = response.model_dump() if hasattr(response, "model_dump") else response
+    snippets: list[EvidenceSnippet] = []
+    for item in payload.get("output", []):
+        if item.get("type") != "file_search_call":
+            continue
+        for result in item.get("results") or []:
+            text = " ".join((result.get("text") or "").split())
+            if not text:
+                continue
+            snippets.append(
+                EvidenceSnippet(
+                    filename=result.get("filename") or "Unknown file",
+                    file_id=result.get("file_id") or "",
+                    score=result.get("score"),
+                    text=text,
+                )
+            )
+    return tuple(snippets)
 
 
 def ask_evidence(
@@ -136,6 +166,7 @@ def ask_evidence(
         answer = RagAnswer(
             text=response.output_text,
             citations=_citations(response),
+            evidence=_evidence_snippets(response),
             response_id=response.id,
             input_tokens=input_tokens,
             output_tokens=output_tokens,

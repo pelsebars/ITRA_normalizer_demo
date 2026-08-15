@@ -13,7 +13,7 @@ A functional vertical slice for normalizing synthetic IT Risk Assessments. The f
 - Protects paid actions with an access code, server-side quotas, result caching, and a kill switch.
 - Records API calls and token usage in SQLite for demo-cost visibility.
 - Flags low agreement and reconciliation findings explicitly for QA review.
-- Includes a managed OpenAI file-search Q&A surface with source-file citations.
+- Includes a managed OpenAI file-search Q&A surface with source-file citations, retrieved evidence snippets, and relevance scores.
 
 PDF parsing, all-control normalization, dashboarding, and the combined SQL/RAG chat agent are subsequent slices.
 

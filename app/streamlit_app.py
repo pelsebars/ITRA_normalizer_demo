@@ -219,6 +219,14 @@ if ask_clicked:
             st.caption("Sources: " + " · ".join(citation.filename for citation in answer.citations))
         else:
             st.warning("The response contained no file citation. Treat it as unverified.")
+        if answer.evidence:
+            with st.expander(f"Retrieved evidence · {len(answer.evidence)} chunks"):
+                for index, snippet in enumerate(answer.evidence, start=1):
+                    score = f" · relevance {snippet.score:.0%}" if snippet.score is not None else ""
+                    st.markdown(f"**{index}. {snippet.filename}{score}**")
+                    st.write(snippet.text)
+        else:
+            st.warning("No retrieved evidence chunks were returned for inspection.")
         st.caption(f"Response {answer.response_id} · {answer.total_tokens:,} tokens")
     except (NormalizationBlocked, ValueError) as exc:
         st.warning(str(exc))

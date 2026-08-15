@@ -17,6 +17,17 @@ class FakeResponse:
         return {
             "output": [
                 {
+                    "type": "file_search_call",
+                    "results": [
+                        {
+                            "filename": "SYN_ITRA_009_Site_Indigo.pdf",
+                            "file_id": "file_indigo",
+                            "score": 0.91,
+                            "text": "During troubleshooting, a common engineering login is used.",
+                        }
+                    ],
+                },
+                {
                     "type": "message",
                     "content": [
                         {
@@ -67,6 +78,9 @@ def test_rag_query_uses_file_search_and_records_usage(tmp_path: Path) -> None:
     assert [citation.filename for citation in answer.citations] == [
         "SYN_ITRA_009_Site_Indigo.pdf"
     ]
+    assert len(answer.evidence) == 1
+    assert answer.evidence[0].score == 0.91
+    assert answer.evidence[0].text.startswith("During troubleshooting")
     assert responses.kwargs["tools"] == [
         {
             "type": "file_search",
