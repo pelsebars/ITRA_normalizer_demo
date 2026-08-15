@@ -138,3 +138,45 @@ def control_rows(connection: sqlite3.Connection, control_id: str) -> list[sqlite
            ORDER BY ca.site_id""",
         (control_id,),
     ).fetchall()
+
+
+def portfolio_summary(connection: sqlite3.Connection) -> sqlite3.Row:
+    return connection.execute(
+        """SELECT
+             (SELECT COUNT(*) FROM sites) AS sites,
+             (SELECT COUNT(*) FROM control_catalog) AS controls,
+             (SELECT COUNT(*) FROM control_answers) AS assessments,
+             (SELECT COUNT(*) FROM control_answers
+               WHERE status_raw = 'Partially Compliant') AS partial,
+             (SELECT COUNT(*) FROM control_answers
+               WHERE status_raw = 'Not Applicable') AS not_applicable,
+             (SELECT COUNT(*) FROM control_answers
+               WHERE normalized_value_json IS NOT NULL) AS normalized,
+             (SELECT COUNT(*) FROM control_answers
+               WHERE needs_review = 1) AS review_findings"""
+    ).fetchone()
+
+
+def status_by_section(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
+        """SELECT cc.section_prefix AS section, ca.status_raw AS status, COUNT(*) AS count
+           FROM control_answers ca
+           JOIN control_catalog cc ON cc.control_id = ca.control_id
+           GROUP BY cc.section_prefix, ca.status_raw
+           ORDER BY cc.section_prefix, ca.status_raw"""
+    ).fetchall()
+
+
+def control_catalog_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
+        """SELECT cc.control_id, cc.section_prefix, cc.control_text,
+                  COUNT(ca.site_id) AS site_count,
+                  SUM(CASE WHEN ca.status_raw = 'Compliant' THEN 1 ELSE 0 END) AS compliant,
+                  SUM(CASE WHEN ca.status_raw = 'Partially Compliant' THEN 1 ELSE 0 END) AS partial,
+                  SUM(CASE WHEN ca.status_raw = 'Not Applicable' THEN 1 ELSE 0 END) AS not_applicable,
+                  SUM(CASE WHEN ca.needs_review = 1 THEN 1 ELSE 0 END) AS review_findings
+           FROM control_catalog cc
+           LEFT JOIN control_answers ca ON ca.control_id = cc.control_id
+           GROUP BY cc.control_id, cc.section_prefix, cc.control_text
+           ORDER BY cc.control_id"""
+    ).fetchall()

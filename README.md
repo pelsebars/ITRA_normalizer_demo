@@ -9,13 +9,13 @@ A functional vertical slice for normalizing synthetic IT Risk Assessments. The f
 - Runs three real OpenAI assessments per site for AC.2.1.
 - Uses Responses API Structured Outputs with a Pydantic schema.
 - Persists normalized values, reconciliation, confidence, model/prompt version, and agreement rate.
-- Presents raw evidence and normalized results in Streamlit.
+- Presents an executive portfolio dashboard, a control explorer, and raw-versus-normalized evidence in Streamlit.
 - Protects paid actions with an access code, server-side quotas, result caching, and a kill switch.
 - Records API calls and token usage in SQLite for demo-cost visibility.
 - Flags low agreement and reconciliation findings explicitly for QA review.
 - Includes a managed OpenAI file-search Q&A surface with source-file citations, retrieved evidence snippets, and relevance scores.
 
-PDF parsing, all-control normalization, dashboarding, and the combined SQL/RAG chat agent are subsequent slices.
+PDF parsing, all-control normalization, and the combined SQL/RAG chat agent are subsequent slices.
 
 ## Run locally
 
