@@ -10,10 +10,11 @@ from typing import Callable, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from .db import control_rows
+from .db import control_rows, section_control_rows
 
 
 PROMPT_VERSION = "ac-2-1-v1"
+CONTROL_PROMPT_VERSION = "control-evidence-v1"
 
 
 class NormalizationBlocked(RuntimeError):
@@ -25,6 +26,19 @@ class AC21Assessment(BaseModel):
     compensating_control_present: Optional[bool]
     status_reconciled: Literal["Aligned", "Partially divergent", "Divergent"]
     reconciliation_note: str = Field(description="A concise, evidence-based explanation in English.")
+    confidence: float = Field(ge=0, le=1)
+    needs_review: bool
+
+
+class ControlAssessment(BaseModel):
+    evidence_assessment: Literal[
+        "Effective", "Partially effective", "Ineffective", "Not applicable", "Insufficient evidence"
+    ]
+    status_reconciled: Literal["Aligned", "Partially divergent", "Divergent"]
+    evidence_summary: str = Field(description="A concise summary grounded only in supplied evidence.")
+    gap_or_qualification: Optional[str] = Field(
+        description="The material gap or qualification, or null when none is supported."
+    )
     confidence: float = Field(ge=0, le=1)
     needs_review: bool
 
@@ -50,6 +64,17 @@ class NormalizationSummary:
 
 ClassifierOutput = Union[AC21Assessment, ClassificationResult]
 Classifier = Callable[[dict], ClassifierOutput]
+GenericClassifierOutput = Union[ControlAssessment, "GenericClassificationResult"]
+GenericClassifier = Callable[[dict], GenericClassifierOutput]
+
+
+@dataclass(frozen=True)
+class GenericClassificationResult:
+    assessment: ControlAssessment
+    response_id: str = ""
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
 
 
 SYSTEM_PROMPT = """You are a cautious IT risk assessment reviewer.
@@ -65,6 +90,21 @@ Rubric:
 
 Treat service identities used only for automation as different from shared interactive human accounts.
 Use only the supplied evidence. If evidence is incomplete, lower confidence and require review.
+"""
+
+CONTROL_SYSTEM_PROMPT = """You are a cautious IT risk assessment reviewer.
+Assess the supplied control using only its control text, reported status, detailed description,
+implementation considerations, and site security context.
+
+Classify evidence as Effective, Partially effective, Ineffective, Not applicable, or Insufficient evidence.
+Reconcile the evidence with the reported status:
+- Aligned: the status and evidence materially agree.
+- Partially divergent: the status is broadly defensible but hides a material gap or qualification.
+- Divergent: the status conflicts with the supplied evidence.
+
+Do not treat a self-reported Compliant status as proof. Do not invent missing safeguards.
+Require QA review for divergent evidence, material qualifications, insufficient evidence, or uncertainty.
+Keep the evidence summary and gap concise and in English.
 """
 
 
@@ -88,6 +128,36 @@ def openai_classifier(model: str, max_output_tokens: int = 500) -> Classifier:
             raise RuntimeError("The model did not return a parsed assessment")
         usage = response.usage
         return ClassificationResult(
+            assessment=response.output_parsed,
+            response_id=response.id,
+            input_tokens=getattr(usage, "input_tokens", 0) or 0,
+            output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            total_tokens=getattr(usage, "total_tokens", 0) or 0,
+        )
+
+    return classify
+
+
+def openai_control_classifier(model: str, max_output_tokens: int = 500) -> GenericClassifier:
+    from openai import OpenAI
+
+    client = OpenAI()
+
+    def classify(evidence: dict) -> GenericClassificationResult:
+        response = client.responses.parse(
+            model=model,
+            input=[
+                {"role": "system", "content": CONTROL_SYSTEM_PROMPT},
+                {"role": "user", "content": json.dumps(evidence, ensure_ascii=False, indent=2)},
+            ],
+            text_format=ControlAssessment,
+            max_output_tokens=max_output_tokens,
+            store=False,
+        )
+        if response.output_parsed is None:
+            raise RuntimeError("The model did not return a parsed control assessment")
+        usage = response.usage
+        return GenericClassificationResult(
             assessment=response.output_parsed,
             response_id=response.id,
             input_tokens=getattr(usage, "input_tokens", 0) or 0,
@@ -133,6 +203,11 @@ def _input_hash(evidence: dict, model: str, runs: int) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _control_input_hash(evidence: dict, model: str, runs: int) -> str:
+    payload = {"evidence": evidence, "model": model, "prompt_version": CONTROL_PROMPT_VERSION, "runs": runs}
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
 def _vote_key(result: AC21Assessment) -> tuple:
     return (
         result.shared_accounts_used,
@@ -148,6 +223,17 @@ def choose_consensus(results: list[AC21Assessment]) -> tuple[AC21Assessment, str
     counts = Counter(_vote_key(result) for result in results)
     winner_key, winner_count = counts.most_common(1)[0]
     winner = next(result for result in results if _vote_key(result) == winner_key)
+    if winner_count != len(results):
+        winner = winner.model_copy(update={"needs_review": True})
+    return winner, f"{winner_count}/{len(results)}"
+
+
+def choose_control_consensus(results: list[ControlAssessment]) -> tuple[ControlAssessment, str]:
+    if not results:
+        raise ValueError("At least one result is required")
+    keys = [(r.evidence_assessment, r.status_reconciled, r.needs_review) for r in results]
+    winner_key, winner_count = Counter(keys).most_common(1)[0]
+    winner = next(r for r in results if (r.evidence_assessment, r.status_reconciled, r.needs_review) == winner_key)
     if winner_count != len(results):
         winner = winner.model_copy(update={"needs_review": True})
     return winner, f"{winner_count}/{len(results)}"
@@ -326,3 +412,96 @@ def normalize_ac21(
         finish_api_job(connection, job_id, "failed", str(exc))
         raise
     return NormalizationSummary(len(work), cached_sites, **usage)
+
+
+def normalize_section(
+    connection: sqlite3.Connection,
+    classifier: GenericClassifier,
+    model: str,
+    section_prefix: str,
+    runs: int = 3,
+    *,
+    calls_enabled: bool = True,
+    max_jobs_per_day: int = 10,
+    max_api_calls_per_day: int = 100,
+    force: bool = False,
+    preserve_control_ids: tuple[str, ...] = ("AC.2.1",),
+) -> NormalizationSummary:
+    if not calls_enabled:
+        raise NormalizationBlocked("OpenAI calls are disabled by the server kill switch.")
+    if runs < 1 or runs % 2 == 0:
+        raise ValueError("runs must be a positive odd number")
+
+    rows = section_control_rows(connection, section_prefix)
+    work = []
+    cached_count = 0
+    for row in rows:
+        if not force and row["control_id"] in preserve_control_ids and row["normalized_value_json"]:
+            cached_count += 1
+            continue
+        evidence = {
+            "site_id": row["site_id"],
+            "site_name": row["site_name"],
+            "control_id": row["control_id"],
+            "control_text": row["control_text"],
+            "status_raw": row["status_raw"],
+            "detailed_description": row["detailed_description"],
+            "implementation_considerations": row["implementation_considerations"],
+            "security_context": json.loads(row["security_context_json"] or "{}"),
+        }
+        fingerprint = _control_input_hash(evidence, model, runs)
+        cached = not force and row["normalized_value_json"] and row["normalized_input_hash"] == fingerprint
+        if cached:
+            cached_count += 1
+        else:
+            work.append((row, evidence, fingerprint))
+    if not work:
+        return NormalizationSummary(0, cached_count, 0, 0, 0, 0)
+
+    batch_hash = hashlib.sha256("".join(item[2] for item in work).encode()).hexdigest()
+    action = f"normalize_{section_prefix.lower()}"
+    job_id = reserve_api_job(
+        connection, batch_hash, model, len(work) * runs,
+        max_jobs_per_day, max_api_calls_per_day,
+        action=action, prompt_version=CONTROL_PROMPT_VERSION,
+    )
+    usage = {"api_calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    try:
+        for row, evidence, fingerprint in work:
+            assessments = []
+            for _ in range(runs):
+                raw_result = classifier(evidence)
+                result = raw_result if isinstance(raw_result, GenericClassificationResult) else GenericClassificationResult(raw_result)
+                assessments.append(result.assessment)
+                record_api_usage(
+                    connection, job_id, model, action=action, response_id=result.response_id,
+                    input_tokens=result.input_tokens, output_tokens=result.output_tokens,
+                    total_tokens=result.total_tokens,
+                )
+                usage["api_calls"] += 1
+                usage["input_tokens"] += result.input_tokens
+                usage["output_tokens"] += result.output_tokens
+                usage["total_tokens"] += result.total_tokens
+            assessment, agreement = choose_control_consensus(assessments)
+            normalized_value = {
+                "evidence_assessment": assessment.evidence_assessment,
+                "evidence_summary": assessment.evidence_summary,
+                "gap_or_qualification": assessment.gap_or_qualification,
+            }
+            connection.execute(
+                """UPDATE control_answers SET
+                     normalized_value_json=?, status_reconciled=?, reconciliation_note=?,
+                     confidence=?, needs_review=?, llm_agreement_rate=?, model_version=?,
+                     prompt_version=?, normalized_input_hash=?, normalized_at=?
+                   WHERE site_id=? AND control_id=?""",
+                (json.dumps(normalized_value), assessment.status_reconciled,
+                 assessment.gap_or_qualification or assessment.evidence_summary,
+                 assessment.confidence, int(assessment.needs_review), agreement, model,
+                 CONTROL_PROMPT_VERSION, fingerprint, _utc_now(), row["site_id"], row["control_id"]),
+            )
+            connection.commit()
+        finish_api_job(connection, job_id, "completed")
+    except Exception as exc:
+        finish_api_job(connection, job_id, "failed", str(exc))
+        raise
+    return NormalizationSummary(len(work), cached_count, **usage)

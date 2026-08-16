@@ -7,8 +7,10 @@ import pytest
 from itra_normalizer.normalization import (
     AC21Assessment,
     ClassificationResult,
+    ControlAssessment,
     NormalizationBlocked,
     normalize_ac21,
+    normalize_section,
     usage_today,
 )
 
@@ -110,3 +112,55 @@ def test_usage_tokens_are_recorded(tmp_path: Path) -> None:
         "output_tokens": 30,
         "total_tokens": 90,
     }
+
+
+def generic_classifier(evidence: dict) -> ControlAssessment:
+    partial = evidence["status_raw"] == "Partially Compliant"
+    return ControlAssessment(
+        evidence_assessment="Partially effective" if partial else "Effective",
+        status_reconciled="Aligned",
+        evidence_summary=f"Evidence assessed for {evidence['control_id']}.",
+        gap_or_qualification="A documented qualification exists." if partial else None,
+        confidence=0.9,
+        needs_review=partial,
+    )
+
+
+def test_access_control_section_normalizes_all_non_hero_assessments(tmp_path: Path) -> None:
+    connection = connect(tmp_path / "test.db")
+    ingest_fixtures(connection)
+    normalize_ac21(connection, expected_classifier, "test-model", runs=3)
+
+    summary = normalize_section(connection, generic_classifier, "test-model", "AC", runs=3)
+    assert summary.processed_sites == 20
+    assert summary.cached_sites == 2
+    assert summary.api_calls == 60
+    assert connection.execute(
+        """SELECT COUNT(*) FROM control_answers ca
+           JOIN control_catalog cc ON cc.control_id=ca.control_id
+           WHERE cc.section_prefix='AC' AND ca.normalized_value_json IS NOT NULL"""
+    ).fetchone()[0] == 22
+
+
+def test_access_control_section_reuses_generic_cache(tmp_path: Path) -> None:
+    connection = connect(tmp_path / "test.db")
+    ingest_fixtures(connection)
+    normalize_section(connection, generic_classifier, "test-model", "AC", runs=1)
+
+    def must_not_run(_: dict) -> ControlAssessment:
+        raise AssertionError("classifier should not run for cached section")
+
+    summary = normalize_section(connection, must_not_run, "test-model", "AC", runs=1)
+    assert summary.processed_sites == 0
+    assert summary.cached_sites == 22
+    assert summary.api_calls == 0
+
+
+def test_section_job_reserves_full_call_count(tmp_path: Path) -> None:
+    connection = connect(tmp_path / "test.db")
+    ingest_fixtures(connection)
+    with pytest.raises(NormalizationBlocked, match="daily OpenAI API call limit"):
+        normalize_section(
+            connection, generic_classifier, "test-model", "AC", runs=3,
+            max_api_calls_per_day=65,
+        )

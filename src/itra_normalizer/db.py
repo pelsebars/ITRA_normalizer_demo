@@ -180,3 +180,25 @@ def control_catalog_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
            GROUP BY cc.control_id, cc.section_prefix, cc.control_text
            ORDER BY cc.control_id"""
     ).fetchall()
+
+
+def section_control_rows(
+    connection: sqlite3.Connection,
+    section_prefix: str,
+    *,
+    exclude_control_ids: Iterable[str] = (),
+) -> list[sqlite3.Row]:
+    excluded = tuple(exclude_control_ids)
+    placeholders = ",".join("?" for _ in excluded)
+    exclusion = f"AND ca.control_id NOT IN ({placeholders})" if excluded else ""
+    return connection.execute(
+        f"""SELECT ca.*, s.site_name, cc.control_text, cc.section_prefix,
+                   (SELECT json_group_object(question_id, answer)
+                      FROM security_answers sa WHERE sa.site_id = ca.site_id) AS security_context_json
+            FROM control_answers ca
+            JOIN sites s ON s.site_id = ca.site_id
+            JOIN control_catalog cc ON cc.control_id = ca.control_id
+            WHERE cc.section_prefix = ? {exclusion}
+            ORDER BY ca.control_id, ca.site_id""",
+        (section_prefix, *excluded),
+    ).fetchall()

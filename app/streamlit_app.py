@@ -20,7 +20,7 @@ from itra_normalizer.db import (
     portfolio_summary, status_by_section,
 )
 from itra_normalizer.normalization import (
-    NormalizationBlocked, normalize_ac21, openai_classifier, usage_today,
+    NormalizationBlocked, normalize_section, openai_control_classifier, usage_today,
 )
 from itra_normalizer.rag import ask_evidence
 
@@ -74,26 +74,27 @@ with st.sidebar:
         and bool(os.getenv("OPENAI_API_KEY")) and bool(settings.demo_access_code)
     )
     if st.button(
-        "Run or reuse AC.2.1 normalization", type="primary", width="stretch",
+        "Normalize Access Control domain", type="primary", width="stretch",
         disabled=not paid_actions_ready,
     ):
         try:
             with st.spinner(f"Assessing each site {settings.normalization_runs} times…"):
-                result = normalize_ac21(
+                result = normalize_section(
                     connection,
-                    classifier=openai_classifier(settings.model, settings.max_output_tokens),
-                    model=settings.model, runs=settings.normalization_runs,
+                    classifier=openai_control_classifier(settings.model, settings.max_output_tokens),
+                    model=settings.model, section_prefix="AC", runs=settings.normalization_runs,
                     calls_enabled=settings.openai_calls_enabled,
                     max_jobs_per_day=settings.max_normalization_jobs_per_day,
                     max_api_calls_per_day=settings.max_global_api_calls_per_day,
                 )
             if result.api_calls:
                 st.success(
-                    f"Normalized {result.processed_sites} sites with {result.api_calls} API calls "
+                    f"Normalized {result.processed_sites} Access Control assessments with "
+                    f"{result.api_calls} API calls "
                     f"and {result.total_tokens:,} tokens."
                 )
             else:
-                st.info(f"Reused cached results for {result.cached_sites} sites. No API calls made.")
+                st.info(f"Reused {result.cached_sites} cached assessments. No API calls made.")
             st.rerun()
         except NormalizationBlocked as exc:
             st.warning(str(exc))
@@ -136,8 +137,8 @@ with dashboard_tab:
         st.metric("Normalized assessments", f"{portfolio['normalized']} / {portfolio['assessments']}")
         st.metric("Not applicable", portfolio["not_applicable"])
         st.caption(
-            "Normalization deliberately targets one control. The remaining controls form "
-            "a visible expansion backlog."
+            "The current normalization scope is the Access Control domain. Other domains form "
+            "the visible expansion backlog."
         )
 
     catalog_frame = pd.DataFrame([dict(row) for row in control_catalog_rows(connection)])
@@ -183,9 +184,10 @@ with explorer_tab:
     comparison = []
     for row in rows:
         normalized = json.loads(row["normalized_value_json"]) if row["normalized_value_json"] else {}
+        assessment = normalized.get("shared_accounts_used") or normalized.get("evidence_assessment", "Not normalized")
         comparison.append({
             "Site": row["site_name"], "Raw status": row["status_raw"],
-            "Shared accounts": normalized.get("shared_accounts_used", "Not normalized"),
+            "Normalized assessment": assessment,
             "Reconciliation": row["status_reconciled"] or "Not normalized",
             "Agreement": row["llm_agreement_rate"] or "—",
             "QA review": "Yes" if row["needs_review"] else ("No" if row["needs_review"] is not None else "—"),
