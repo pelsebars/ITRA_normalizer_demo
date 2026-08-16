@@ -17,7 +17,7 @@ if str(SRC) not in sys.path:
 from itra_normalizer.config import get_settings
 from itra_normalizer.db import (
     connect, control_catalog_rows, control_rows, ingest_fixtures,
-    portfolio_summary, status_by_section,
+    normalization_progress_by_section, portfolio_summary, status_by_section,
 )
 from itra_normalizer.normalization import (
     NormalizationBlocked, normalize_section, openai_control_classifier, usage_today,
@@ -29,6 +29,12 @@ settings = get_settings()
 connection = connect(settings.db_path)
 ingest_fixtures(connection, ROOT / "data/parsed", ROOT / "data/control_catalog.json")
 usage = usage_today(connection)
+domain_progress = [dict(row) for row in normalization_progress_by_section(connection)]
+DOMAIN_NAMES = {
+    "AC": "Access Control", "BC": "Business Continuity", "DI": "Data Integrity",
+    "LG": "Logging", "NW": "Network Security", "PD": "Physical & Device",
+    "TP": "Third Party", "VM": "Vulnerability Management",
+}
 
 st.title("ITRA Normalizer")
 st.caption("Portfolio intelligence from inconsistent assessments · Synthetic demo data")
@@ -73,23 +79,41 @@ with st.sidebar:
         st.session_state.api_authorized and settings.openai_calls_enabled
         and bool(os.getenv("OPENAI_API_KEY")) and bool(settings.demo_access_code)
     )
+    st.subheader("Normalization batch")
+    selected_batch = st.selectbox(
+        "Domain",
+        [row["section"] for row in domain_progress],
+        format_func=lambda section: f"{section} · {DOMAIN_NAMES.get(section, section)}",
+    )
+    selected_progress = next(row for row in domain_progress if row["section"] == selected_batch)
+    planned_calls = selected_progress["remaining"] * settings.normalization_runs
+    available_calls = settings.max_global_api_calls_per_day - usage["reserved_api_calls"]
+    st.caption(
+        f"{selected_progress['normalized']} / {selected_progress['total']} normalized control "
+        f"assessments · {selected_progress['remaining']} remaining · {planned_calls} planned API calls"
+    )
+    exceeds_quota = planned_calls > available_calls
+    if exceeds_quota:
+        st.warning(
+            f"This batch needs {planned_calls} calls; today's remaining quota is {available_calls}."
+        )
     if st.button(
-        "Normalize Access Control domain", type="primary", width="stretch",
-        disabled=not paid_actions_ready,
+        f"Normalize {selected_batch} domain", type="primary", width="stretch",
+        disabled=not paid_actions_ready or not selected_progress["remaining"] or exceeds_quota,
     ):
         try:
             with st.spinner(f"Assessing each site {settings.normalization_runs} times…"):
                 result = normalize_section(
                     connection,
                     classifier=openai_control_classifier(settings.model, settings.max_output_tokens),
-                    model=settings.model, section_prefix="AC", runs=settings.normalization_runs,
+                    model=settings.model, section_prefix=selected_batch, runs=settings.normalization_runs,
                     calls_enabled=settings.openai_calls_enabled,
                     max_jobs_per_day=settings.max_normalization_jobs_per_day,
                     max_api_calls_per_day=settings.max_global_api_calls_per_day,
                 )
             if result.api_calls:
                 st.success(
-                    f"Normalized {result.processed_sites} Access Control assessments with "
+                    f"Normalized {result.processed_sites} {selected_batch} control assessments with "
                     f"{result.api_calls} API calls "
                     f"and {result.total_tokens:,} tokens."
                 )
@@ -134,12 +158,30 @@ with dashboard_tab:
             "A reported status is not the same as normalized evidence. AC.2.1 shows how "
             "two sites can both report Compliant while their underlying practices differ."
         )
-        st.metric("Normalized assessments", f"{portfolio['normalized']} / {portfolio['assessments']}")
+        st.metric(
+            "Normalized control assessments",
+            f"{portfolio['normalized']} / {portfolio['assessments']}",
+        )
         st.metric("Not applicable", portfolio["not_applicable"])
         st.caption(
-            "The current normalization scope is the Access Control domain. Other domains form "
-            "the visible expansion backlog."
+            "Normalization runs in controlled domain batches. Cached results are reused, and "
+            "only remaining site-control responses incur model calls."
         )
+
+    progress_frame = pd.DataFrame(domain_progress)
+    progress_frame["Domain"] = progress_frame.apply(
+        lambda row: f"{row['section']} · {DOMAIN_NAMES.get(row['section'], row['section'])}", axis=1
+    )
+    progress_frame["Progress"] = progress_frame.apply(
+        lambda row: f"{row['normalized']} / {row['total']}", axis=1
+    )
+    st.markdown("#### Normalization progress by domain")
+    st.dataframe(
+        progress_frame[["Domain", "Progress", "remaining", "review_findings"]].rename(
+            columns={"remaining": "Remaining", "review_findings": "QA findings"}
+        ),
+        hide_index=True, width="stretch",
+    )
 
     catalog_frame = pd.DataFrame([dict(row) for row in control_catalog_rows(connection)])
     priority_frame = catalog_frame[

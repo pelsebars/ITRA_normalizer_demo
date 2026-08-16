@@ -4,6 +4,7 @@ from itra_normalizer.db import (
     connect,
     control_catalog_rows,
     ingest_fixtures,
+    normalization_progress_by_section,
     portfolio_summary,
     status_by_section,
 )
@@ -34,3 +35,11 @@ def test_dashboard_breakdowns_cover_every_assessment(tmp_path: Path) -> None:
     catalog = control_catalog_rows(connection)
     assert len(catalog) == 32
     assert all(row["site_count"] == 2 for row in catalog)
+
+
+def test_normalization_progress_covers_all_domains(tmp_path: Path) -> None:
+    progress = normalization_progress_by_section(loaded_database(tmp_path))
+    assert len(progress) == 8
+    assert sum(row["total"] for row in progress) == 64
+    assert sum(row["normalized"] for row in progress) == 0
+    assert sum(row["remaining"] for row in progress) == 64

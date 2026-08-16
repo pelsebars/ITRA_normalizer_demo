@@ -167,6 +167,20 @@ def status_by_section(connection: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
+def normalization_progress_by_section(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
+        """SELECT cc.section_prefix AS section,
+                  COUNT(*) AS total,
+                  SUM(CASE WHEN ca.normalized_value_json IS NOT NULL THEN 1 ELSE 0 END) AS normalized,
+                  SUM(CASE WHEN ca.normalized_value_json IS NULL THEN 1 ELSE 0 END) AS remaining,
+                  SUM(CASE WHEN ca.needs_review = 1 THEN 1 ELSE 0 END) AS review_findings
+           FROM control_answers ca
+           JOIN control_catalog cc ON cc.control_id = ca.control_id
+           GROUP BY cc.section_prefix
+           ORDER BY cc.section_prefix"""
+    ).fetchall()
+
+
 def control_catalog_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
     return connection.execute(
         """SELECT cc.control_id, cc.section_prefix, cc.control_text,
