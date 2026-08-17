@@ -1,0 +1,1070 @@
+{
+  "equipment": {
+    "name": "Orion Automated Assembly Line",
+    "manufacturer": "fictional",
+    "canonical_architecture": [
+      {
+        "component": "Orion PLC Control Pair",
+        "purpose": "Deterministic motion, sequence and interlock control",
+        "technology_type": "Industrial PLC pair",
+        "operating_system": "Vendor real-time firmware",
+        "data_handled": "Machine state, recipes, interlock status",
+        "authentication_capability": "Local engineering roles; no directory integration",
+        "network_connectivity": "Manufacturing control VLAN; engineering protocol restricted",
+        "configuration": "Identical hardware/firmware baseline; local IP and role configuration"
+      },
+      {
+        "component": "Operator HMI Cluster",
+        "purpose": "Operate the line, acknowledge alarms, review batch status",
+        "technology_type": "Industrial touch HMI terminals",
+        "operating_system": "Embedded Windows IoT LTSC",
+        "data_handled": "Operator actions, alarms, production status",
+        "authentication_capability": "Directory-backed where supported; one legacy interface may require local identity",
+        "network_connectivity": "Manufacturing application VLAN",
+        "configuration": "Common image; local identity mapping and session settings"
+      },
+      {
+        "component": "Vision Inspection Station",
+        "purpose": "Inspect assembly attributes and reject nonconforming units",
+        "technology_type": "Industrial vision controller + cameras",
+        "operating_system": "Vendor Linux appliance",
+        "data_handled": "Inspection results, images, reject reasons",
+        "authentication_capability": "Local application accounts; service integration supported",
+        "network_connectivity": "Inspection VLAN; outbound data to application server",
+        "configuration": "Identical appliance family; local account and retention configuration"
+      },
+      {
+        "component": "Orion Application Server",
+        "purpose": "Coordinate line services, collect events and expose operator services",
+        "technology_type": "Virtual Windows application server",
+        "operating_system": "Windows Server 2022",
+        "data_handled": "Production events, configuration, audit records",
+        "authentication_capability": "Active Directory capable; service identities supported",
+        "network_connectivity": "Manufacturing server VLAN; MES and logging routes",
+        "configuration": "Identical server role; local domain OU and hardening parameters"
+      },
+      {
+        "component": "Orion SQL Server",
+        "purpose": "Store local production history and configuration data",
+        "technology_type": "Virtual SQL database server",
+        "operating_system": "Windows Server 2022 + SQL Server",
+        "data_handled": "Production records, audit events, configuration",
+        "authentication_capability": "Directory groups and service identity",
+        "network_connectivity": "Manufacturing server VLAN; restricted DB flows",
+        "configuration": "Common schema; local backup schedule and service identity configuration"
+      },
+      {
+        "component": "Engineering Workstation",
+        "purpose": "Authorized maintenance, diagnostics and controlled configuration changes",
+        "technology_type": "Industrial engineering PC",
+        "operating_system": "Windows 11 Enterprise LTSC",
+        "data_handled": "Engineering projects, diagnostics, change packages",
+        "authentication_capability": "Directory-backed named identities; emergency local account possible",
+        "network_connectivity": "Engineering VLAN; controlled management routes",
+        "configuration": "Common build; local privileged-access and remote-support configuration"
+      },
+      {
+        "component": "Barcode and Scanner Set",
+        "purpose": "Read component and unit identifiers during assembly",
+        "technology_type": "Ethernet barcode readers",
+        "operating_system": "Embedded firmware",
+        "data_handled": "Material and unit identifiers",
+        "authentication_capability": "Local device administrator only",
+        "network_connectivity": "Device VLAN to application server",
+        "configuration": "Identical model family; local admin password and network settings"
+      },
+      {
+        "component": "MES Interface Service",
+        "purpose": "Exchange orders, confirmations and production status with central MES",
+        "technology_type": "Windows integration service",
+        "operating_system": "Runs on Orion Application Server",
+        "data_handled": "Order identifiers, unit status, production quantities",
+        "authentication_capability": "Service identity; mutual TLS application authentication",
+        "network_connectivity": "Outbound to central MES gateway",
+        "configuration": "Common interface contract; local service credentials and endpoint route"
+      },
+      {
+        "component": "Security Logging Connector",
+        "purpose": "Forward supported audit and security events to central SIEM",
+        "technology_type": "Windows agent + syslog relay",
+        "operating_system": "Windows agent / hardened Linux relay",
+        "data_handled": "Authentication, system, security and selected application logs",
+        "authentication_capability": "Managed service identity / certificate",
+        "network_connectivity": "Outbound to central security logging service",
+        "configuration": "Common connector; local source onboarding may vary"
+      },
+      {
+        "component": "Backup Agent and Repository Interface",
+        "purpose": "Protect server configuration and production data",
+        "technology_type": "Enterprise backup agent",
+        "operating_system": "Windows agent",
+        "data_handled": "Server images, SQL backups, application configuration",
+        "authentication_capability": "Managed service identity",
+        "network_connectivity": "Outbound to central backup service",
+        "configuration": "Common tooling; local frequency, retention and restore testing vary"
+      },
+      {
+        "component": "Remote Administration Gateway Path",
+        "purpose": "Provide approved internal or supplier support without direct Internet exposure",
+        "technology_type": "Jump-host / brokered remote administration path",
+        "operating_system": "Central service; endpoint clients on engineering workstation",
+        "data_handled": "Administrative sessions and session metadata",
+        "authentication_capability": "Directory identity, MFA where remote access enabled",
+        "network_connectivity": "Brokered management route only",
+        "configuration": "Central pattern; each site chooses whether supplier access is enabled and how tightly it is controlled"
+      }
+    ]
+  },
+  "sites": [
+    {
+      "itra_id": "SYN-001",
+      "site": "Site Alder",
+      "system_name": "Orion Automated Assembly Line - Site Alder",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Privileged Vault",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Privileged Vault",
+        "access_review_frequency": "Quarterly",
+        "remote_access": "Restricted",
+        "supplier_remote_access": "No",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Strong"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-002",
+      "site": "Site Birch",
+      "system_name": "Orion Automated Assembly Line - Site Birch",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "No",
+        "shared_account_management": "N/A",
+        "service_accounts_used": "No",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Central Directory",
+        "access_review_frequency": "Semiannual",
+        "remote_access": "Restricted",
+        "supplier_remote_access": "No",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "N/A"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-003",
+      "site": "Site Cedar",
+      "system_name": "Orion Automated Assembly Line - Site Cedar",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Local",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Local",
+        "access_review_frequency": "Annual",
+        "remote_access": "Yes",
+        "supplier_remote_access": "Restricted",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Partial",
+        "central_patching": "Partial",
+        "vulnerability_scanning": "Partial",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "No",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Partial",
+        "compensating_controls": "Moderate"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-004",
+      "site": "Site Delta",
+      "system_name": "Orion Automated Assembly Line - Site Delta",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Privileged Vault",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Privileged Vault",
+        "access_review_frequency": "Quarterly",
+        "remote_access": "Yes",
+        "supplier_remote_access": "Yes",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Strong"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-005",
+      "site": "Site Elm",
+      "system_name": "Orion Automated Assembly Line - Site Elm",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "No",
+        "shared_account_management": "N/A",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Central Directory",
+        "access_review_frequency": "Semiannual",
+        "remote_access": "No",
+        "supplier_remote_access": "No",
+        "mfa_for_remote_access": "N/A",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "N/A"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-006",
+      "site": "Site Fjord",
+      "system_name": "Orion Automated Assembly Line - Site Fjord",
+      "normalized": {
+        "individual_accounts_used": "Mixed",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Privileged Vault",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Privileged Vault",
+        "access_review_frequency": "Annual",
+        "remote_access": "Restricted",
+        "supplier_remote_access": "No",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Partial",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Strong"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-007",
+      "site": "Site Grove",
+      "system_name": "Orion Automated Assembly Line - Site Grove",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "No",
+        "shared_account_management": "N/A",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Central Directory",
+        "access_review_frequency": "Quarterly",
+        "remote_access": "Restricted",
+        "supplier_remote_access": "No",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Strong"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-008",
+      "site": "Site Harbor",
+      "system_name": "Orion Automated Assembly Line - Site Harbor",
+      "normalized": {
+        "individual_accounts_used": "Mixed",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Local",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Local",
+        "access_review_frequency": "Ad hoc",
+        "remote_access": "Yes",
+        "supplier_remote_access": "Restricted",
+        "mfa_for_remote_access": "No",
+        "central_logging": "No",
+        "central_patching": "Partial",
+        "vulnerability_scanning": "Partial",
+        "backup_enabled": "Partial",
+        "backup_restore_tested": "Unknown",
+        "disaster_recovery_plan": "In development",
+        "network_segmentation": "Partial",
+        "removable_media_restricted": "Partial",
+        "compensating_controls": "Weak"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": true,
+      "deliberately_ambiguous": false
+    },
+    {
+      "itra_id": "SYN-009",
+      "site": "Site Indigo",
+      "system_name": "Orion Automated Assembly Line - Site Indigo",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "Yes",
+        "shared_account_management": "Privileged Vault",
+        "service_accounts_used": "Yes",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Privileged Vault",
+        "access_review_frequency": "Semiannual",
+        "remote_access": "Yes",
+        "supplier_remote_access": "Yes",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Yes",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "No",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Moderate"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": true
+    },
+    {
+      "itra_id": "SYN-010",
+      "site": "Site Juniper",
+      "system_name": "Orion Automated Assembly Line - Site Juniper",
+      "normalized": {
+        "individual_accounts_used": "Yes",
+        "shared_accounts_used": "No",
+        "shared_account_management": "N/A",
+        "service_accounts_used": "No",
+        "privileged_accounts_used": "Yes",
+        "privileged_credentials_managed": "Central Directory",
+        "access_review_frequency": "Annual",
+        "remote_access": "Yes",
+        "supplier_remote_access": "Restricted",
+        "mfa_for_remote_access": "Yes",
+        "central_logging": "Yes",
+        "central_patching": "Partial",
+        "vulnerability_scanning": "Yes",
+        "backup_enabled": "Yes",
+        "backup_restore_tested": "Yes",
+        "disaster_recovery_plan": "Yes",
+        "network_segmentation": "Yes",
+        "removable_media_restricted": "Yes",
+        "compensating_controls": "Moderate"
+      },
+      "evidence": {
+        "individual_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_accounts_used": [
+          "AC.1.1",
+          "AC.2.1"
+        ],
+        "shared_account_management": [
+          "AC.2.2"
+        ],
+        "service_accounts_used": [
+          "AC.2.3"
+        ],
+        "privileged_accounts_used": [
+          "AC.2.4"
+        ],
+        "privileged_credentials_managed": [
+          "AC.2.5"
+        ],
+        "access_review_frequency": [
+          "AC.1.4"
+        ],
+        "remote_access": [
+          "AC.3.1"
+        ],
+        "supplier_remote_access": [
+          "TP.1.1",
+          "TP.1.2"
+        ],
+        "mfa_for_remote_access": [
+          "AC.3.2"
+        ],
+        "central_logging": [
+          "LG.1.1",
+          "LG.1.2"
+        ],
+        "central_patching": [
+          "VM.1.1",
+          "VM.1.2"
+        ],
+        "vulnerability_scanning": [
+          "VM.1.3"
+        ],
+        "backup_enabled": [
+          "BC.1.1"
+        ],
+        "backup_restore_tested": [
+          "BC.1.2"
+        ],
+        "disaster_recovery_plan": [
+          "BC.2.1"
+        ],
+        "network_segmentation": [
+          "NW.1.1",
+          "NW.1.2"
+        ],
+        "removable_media_restricted": [
+          "PD.1.1"
+        ],
+        "compensating_controls": [
+          "AC.2.1",
+          "LG.1.2",
+          "PD.1.2"
+        ]
+      },
+      "security_outlier": false,
+      "deliberately_ambiguous": false
+    }
+  ]
+}

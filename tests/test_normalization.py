@@ -15,6 +15,13 @@ from itra_normalizer.normalization import (
 )
 
 
+TWO_SITE_IDS = {"SYN-009", "SYN-010"}
+
+
+def ingest_two_sites(connection) -> None:
+    ingest_fixtures(connection, site_ids=TWO_SITE_IDS)
+
+
 def expected_classifier(evidence: dict) -> AC21Assessment:
     if evidence["site_id"] == "SYN-009":
         return AC21Assessment(
@@ -37,7 +44,7 @@ def expected_classifier(evidence: dict) -> AC21Assessment:
 
 def test_ac21_hero_case_is_persisted(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     summary = normalize_ac21(connection, expected_classifier, "test-model", runs=3)
     assert summary.processed_sites == 2
     assert summary.api_calls == 6
@@ -56,7 +63,7 @@ def test_ac21_hero_case_is_persisted(tmp_path: Path) -> None:
 
 def test_identical_input_reuses_cache_without_calls(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     normalize_ac21(connection, expected_classifier, "test-model", runs=3)
 
     def must_not_run(_: dict) -> AC21Assessment:
@@ -70,7 +77,7 @@ def test_identical_input_reuses_cache_without_calls(tmp_path: Path) -> None:
 
 def test_kill_switch_blocks_before_classifier(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     with pytest.raises(NormalizationBlocked, match="kill switch"):
         normalize_ac21(
             connection, expected_classifier, "test-model", calls_enabled=False
@@ -80,7 +87,7 @@ def test_kill_switch_blocks_before_classifier(tmp_path: Path) -> None:
 
 def test_daily_call_limit_reserves_full_job_before_calls(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     with pytest.raises(NormalizationBlocked, match="daily OpenAI API call limit"):
         normalize_ac21(
             connection, expected_classifier, "test-model", runs=3,
@@ -91,7 +98,7 @@ def test_daily_call_limit_reserves_full_job_before_calls(tmp_path: Path) -> None
 
 def test_usage_tokens_are_recorded(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
 
     def metered_classifier(evidence: dict) -> ClassificationResult:
         return ClassificationResult(
@@ -128,7 +135,7 @@ def generic_classifier(evidence: dict) -> ControlAssessment:
 
 def test_access_control_section_normalizes_all_non_hero_assessments(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     normalize_ac21(connection, expected_classifier, "test-model", runs=3)
 
     summary = normalize_section(connection, generic_classifier, "test-model", "AC", runs=3)
@@ -144,7 +151,7 @@ def test_access_control_section_normalizes_all_non_hero_assessments(tmp_path: Pa
 
 def test_access_control_section_reuses_generic_cache(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     normalize_section(connection, generic_classifier, "test-model", "AC", runs=1)
 
     def must_not_run(_: dict) -> ControlAssessment:
@@ -158,7 +165,7 @@ def test_access_control_section_reuses_generic_cache(tmp_path: Path) -> None:
 
 def test_section_job_reserves_full_call_count(tmp_path: Path) -> None:
     connection = connect(tmp_path / "test.db")
-    ingest_fixtures(connection)
+    ingest_two_sites(connection)
     with pytest.raises(NormalizationBlocked, match="daily OpenAI API call limit"):
         normalize_section(
             connection, generic_classifier, "test-model", "AC", runs=3,

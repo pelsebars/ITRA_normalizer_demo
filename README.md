@@ -4,8 +4,9 @@ A functional vertical slice for normalizing synthetic IT Risk Assessments. Norma
 
 ## Current scope
 
-- Loads two validated synthetic site fixtures into SQLite.
-- Stores all 32 controls, scoping, technical, security, and risk records.
+- Loads ten validated synthetic site fixtures into SQLite.
+- Stores all 32 controls for every site, with richer scoping, technical, security, and risk records for the two original reference fixtures.
+- Splits the portfolio into five calibration and five validation sites; the validation cohort includes the deliberate Site Harbor outlier.
 - Runs three real OpenAI assessments per site-control pair in a selected control domain.
 - Uses Responses API Structured Outputs with a Pydantic schema.
 - Persists normalized values, reconciliation, confidence, model/prompt version, and agreement rate.
@@ -90,7 +91,20 @@ Run the indexing script once from a trusted shell with the project-scoped API ke
 python scripts/create_vector_store.py
 ```
 
-The script creates a new OpenAI vector store, uploads both synthetic PDFs, waits for indexing, and prints an `OPENAI_VECTOR_STORE_ID=...` line. Add that value to Railway. Never pass the API key as a command-line argument or commit it. File-search questions use one API request each and share the same access code, kill switch, daily quotas, spend limit, and usage ledger as normalization.
+The script creates a new OpenAI vector store, uploads the synthetic PDFs, waits for indexing, and prints an `OPENAI_VECTOR_STORE_ID=...` line. Add that value to Railway. Never pass the API key as a command-line argument or commit it. File-search questions use one API request each and share the same access code, kill switch, daily quotas, spend limit, and usage ledger as normalization.
+
+## Rebuild portfolio fixtures
+
+The eight additional fixtures are deterministically extracted from the common 13-page synthetic PDF template. The committed portfolio ground truth is retained separately for validation and is not used as source evidence by the application.
+
+```bash
+python scripts/parse_portfolio_pdfs.py \
+  --source-dir data/raw_pdfs \
+  --output-dir data/parsed \
+  --ground-truth data/portfolio_ground_truth.json
+```
+
+The parser checks page count, extracts all 32 control responses, and fails closed when a control or field boundary is missing.
 
 To stop all paid actions without taking the read-only demo offline, set:
 

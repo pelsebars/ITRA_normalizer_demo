@@ -1,0 +1,361 @@
+{
+  "site_id": "SYN-007",
+  "site_name": "Site Grove",
+  "business_application": "Orion Automated Assembly Line - Site Grove",
+  "application_id": "NMD-ORA-007",
+  "itra_version": "1.0",
+  "type": "Manufacturing Equipment / IT-OT System",
+  "major_event": "Initial synthetic assessment",
+  "description": "Local deployment of the standardized Orion Automated Assembly Line. The core equipment architecture is common across all ten fictional locations; this assessment records the implementation choices made at Site Grove.",
+  "state": "Approved for synthetic analytics testing",
+  "location": "Site Grove",
+  "portfolio_cohort": "Validation",
+  "controls": [
+    {
+      "control_id": "AC.1.1",
+      "control_text": "Interactive users must be uniquely attributable wherever technically feasible.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Interactive workforce access is assigned to named individuals and is traceable to the person using the session.",
+      "implementation_considerations": "Review local application exceptions rather than assuming directory membership covers every interactive interface."
+    },
+    {
+      "control_id": "AC.1.2",
+      "control_text": "Supported Orion components must use the approved enterprise directory for workforce authentication.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Windows servers, the engineering workstation and supported HMIs are joined to the Northstar Enterprise Directory. PLC and appliance firmware remain outside directory scope by design.",
+      "implementation_considerations": "Embedded devices without directory support require local role governance."
+    },
+    {
+      "control_id": "AC.1.3",
+      "control_text": "Access must be provisioned through an authorized request and role assignment process.",
+      "status_raw": "Compliant",
+      "type": "Lifecycle Requirement",
+      "detailed_description": "Access requests identify the requested Orion role and are approved by the line owner before directory-group or local-role assignment. Leavers are removed through the standard workforce offboarding feed plus site verification.",
+      "implementation_considerations": "Ensure urgent maintenance access is retrospectively documented when emergency work is necessary."
+    },
+    {
+      "control_id": "AC.1.4",
+      "control_text": "Access to the Orion platform must be periodically reviewed by an accountable system owner.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "The accountable line owner reviews directory groups and local exceptions quarterly. Review output is retained with the site access record.",
+      "implementation_considerations": "Retain evidence of the review, not only the current user listing."
+    },
+    {
+      "control_id": "AC.2.1",
+      "control_text": "Shared interactive identities may only be used where justified and must have compensating controls.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "No shared interactive workforce account is used. Automated service identities are addressed separately and are not used for human logon.",
+      "implementation_considerations": "Document whether the exception is technically necessary or chosen for convenience."
+    },
+    {
+      "control_id": "AC.2.2",
+      "control_text": "Credentials for shared interactive identities must be protected, rotated and access-controlled.",
+      "status_raw": "Not Applicable",
+      "type": "Risk Control",
+      "detailed_description": "Not applicable because no shared interactive credential is maintained.",
+      "implementation_considerations": "Credential access should be attributable even when the downstream application identity is shared."
+    },
+    {
+      "control_id": "AC.2.3",
+      "control_text": "Non-personal service identities must be limited to automated functions and documented.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Service identities are used for automated MES and backup functions. They are documented in the site account inventory and restricted from interactive sign-in.",
+      "implementation_considerations": "Deny interactive sign-in and assign a clear owner for every service identity."
+    },
+    {
+      "control_id": "AC.2.4",
+      "control_text": "Privileged administration must use controlled administrative identities or equivalent safeguards.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Administrative work uses named elevated identities through the controlled support path. A sealed emergency local administrator remains available for loss-of-directory recovery.",
+      "implementation_considerations": "Separate routine and elevated activity where the platform supports it."
+    },
+    {
+      "control_id": "AC.2.5",
+      "control_text": "Privileged credentials must be centrally governed or otherwise strongly controlled.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Named administrative identities are controlled through central directory groups; the break-glass local account is sealed under site procedure and tested annually.",
+      "implementation_considerations": "Emergency local credentials need rotation, custody and evidence of controlled use."
+    },
+    {
+      "control_id": "AC.3.1",
+      "control_text": "Remote administrative access must use an approved brokered path and strong authentication.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Remote administration is available only to internal Northstar support through the brokered jump path. Direct endpoint connections are blocked.",
+      "implementation_considerations": "Remote routes should be disabled when not needed and should never expose endpoints directly."
+    },
+    {
+      "control_id": "AC.3.2",
+      "control_text": "Remote administrative access must use multi-factor authentication when applicable.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Remote gateway authentication requires the named directory account plus an individually enrolled second factor before a session can be launched.",
+      "implementation_considerations": "The second factor must be bound to the individual identity, not a shared mailbox or team device."
+    },
+    {
+      "control_id": "NW.1.1",
+      "control_text": "The Orion platform must be placed on a segregated manufacturing network with restricted routing.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "PLC, device, application and engineering zones are separated on manufacturing VLANs. Inter-zone flows are limited by firewall rules to the documented Orion data paths.",
+      "implementation_considerations": "Validate actual firewall zoning against the documented manufacturing architecture."
+    },
+    {
+      "control_id": "NW.1.2",
+      "control_text": "Inbound and outbound flows must be limited to documented business and support requirements.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "PLC, device, application and engineering zones are separated on manufacturing VLANs. Inter-zone flows are limited by firewall rules to the documented Orion data paths.",
+      "implementation_considerations": "Remove temporary vendor or commissioning flows after qualification."
+    },
+    {
+      "control_id": "NW.1.3",
+      "control_text": "Direct Internet connectivity from Orion components must not be permitted.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "No Orion endpoint has direct Internet routing. Update packages and supplier sessions enter through controlled enterprise services rather than direct outbound browsing from the equipment.",
+      "implementation_considerations": "Do not use direct web browsing from engineering endpoints to retrieve patches."
+    },
+    {
+      "control_id": "LG.1.1",
+      "control_text": "Security-relevant events from supported Orion components must be forwarded to central monitoring.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Windows security, application audit and gateway session events are forwarded to the Northstar Security Event Service. Health monitoring alerts if forwarding stops.",
+      "implementation_considerations": "Track source coverage; a healthy collector does not prove every subsystem is forwarding."
+    },
+    {
+      "control_id": "LG.1.2",
+      "control_text": "Components unable to forward events centrally must retain sufficient local audit information.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Components that do not generate forwardable events retain local operator/audit history with restricted administrator access.",
+      "implementation_considerations": "Define retention and review expectations for logs that remain local."
+    },
+    {
+      "control_id": "LG.1.3",
+      "control_text": "System time must be synchronized to an approved enterprise time source where supported.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Domain systems synchronize through enterprise time services and network appliances use the designated manufacturing NTP relay where supported.",
+      "implementation_considerations": "Time drift can hinder event correlation across PLC, HMI, server and gateway records."
+    },
+    {
+      "control_id": "VM.1.1",
+      "control_text": "Supported server and workstation components must receive security patches through a controlled process.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Windows servers and engineering endpoints receive centrally approved monthly patch deployments. Industrial firmware changes follow the Orion maintenance release process.",
+      "implementation_considerations": "Coordinate deployment with production windows but maintain a maximum tolerated deferral."
+    },
+    {
+      "control_id": "VM.1.2",
+      "control_text": "Industrial components requiring vendor validation must have a documented local patch process.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Windows servers and engineering endpoints receive centrally approved monthly patch deployments. Industrial firmware changes follow the Orion maintenance release process.",
+      "implementation_considerations": "Supplier validation should not become an indefinite reason for deferral."
+    },
+    {
+      "control_id": "VM.1.3",
+      "control_text": "The Orion environment must be included in vulnerability identification activities where technically safe.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Servers and the engineering workstation are included in authenticated vulnerability scanning. Industrial devices are assessed with non-intrusive discovery and advisory review.",
+      "implementation_considerations": "Use non-intrusive methods for fragile industrial devices."
+    },
+    {
+      "control_id": "VM.1.4",
+      "control_text": "Malware protection must be enabled on supported general-purpose operating systems.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Enterprise anti-malware is active on Windows servers and the engineering workstation; PLCs and embedded appliances are outside product scope.",
+      "implementation_considerations": "Exclude unsupported embedded appliances only with documented rationale."
+    },
+    {
+      "control_id": "VM.1.5",
+      "control_text": "Application execution restrictions should be used on engineering endpoints where compatible.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "The engineering workstation uses application control to permit the approved engineering suite, support tools and signed update packages.",
+      "implementation_considerations": "Vendor diagnostics may need narrowly scoped allow rules."
+    },
+    {
+      "control_id": "BC.1.1",
+      "control_text": "Critical Orion server data and configuration must be backed up at an approved frequency.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "Application server and SQL data are protected by the enterprise backup service every 12 hours. PLC/HMI configuration exports are included after approved changes.",
+      "implementation_considerations": "Include databases, configuration exports and interface certificates/secrets as appropriate."
+    },
+    {
+      "control_id": "BC.1.2",
+      "control_text": "Backup restoration must be periodically tested and evidence retained.",
+      "status_raw": "Compliant",
+      "type": "Lifecycle Requirement",
+      "detailed_description": "A documented restore test recovered the SQL database and application configuration to an isolated recovery environment within the last 12 months.",
+      "implementation_considerations": "A successful backup job is not equivalent to demonstrated restoration."
+    },
+    {
+      "control_id": "BC.2.1",
+      "control_text": "A recovery plan must define restoration of Orion services following a disruptive event.",
+      "status_raw": "Compliant",
+      "type": "Lifecycle Requirement",
+      "detailed_description": "The site recovery runbook defines rebuild order for server, SQL, interfaces and engineering configuration, with responsibilities and recovery prerequisites.",
+      "implementation_considerations": "Document dependencies on central MES, identity, networking and supplier installation media."
+    },
+    {
+      "control_id": "BC.2.2",
+      "control_text": "Recovery procedures must be exercised periodically or during an equivalent controlled test.",
+      "status_raw": "Compliant",
+      "type": "Lifecycle Requirement",
+      "detailed_description": "Recovery steps are exercised through an annual table-top and selected technical restore activity, with lessons captured in the site support record.",
+      "implementation_considerations": "Exercise both technical restore steps and decision/escalation responsibilities."
+    },
+    {
+      "control_id": "TP.1.1",
+      "control_text": "Supplier support access must be explicitly approved, time-bounded and attributable.",
+      "status_raw": "Not Applicable",
+      "type": "Risk Control",
+      "detailed_description": "Supplier personnel do not receive remote access. Assistance is provided by screen-sharing with an internal engineer controlling the Orion session.",
+      "implementation_considerations": "Supplier identity, approval, time limit and business reason should be independently visible."
+    },
+    {
+      "control_id": "TP.1.2",
+      "control_text": "Supplier remote sessions must use the approved remote administration path when enabled.",
+      "status_raw": "Not Applicable",
+      "type": "Risk Control",
+      "detailed_description": "Supplier personnel do not receive remote access. Assistance is provided by screen-sharing with an internal engineer controlling the Orion session.",
+      "implementation_considerations": "Avoid unmanaged conferencing tools as a substitute for the approved support path."
+    },
+    {
+      "control_id": "DI.1.1",
+      "control_text": "Production records transferred from Orion to central systems must be protected from unauthorized modification.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "MES messages use mutually authenticated TLS through the central gateway. The interface service validates message structure and records transfer errors in the local application log.",
+      "implementation_considerations": "Keep transport protection and application validation in scope."
+    },
+    {
+      "control_id": "DI.1.2",
+      "control_text": "Configuration changes affecting production must be authorized and traceable.",
+      "status_raw": "Compliant",
+      "type": "Lifecycle Requirement",
+      "detailed_description": "PLC, HMI and application changes are linked to an approved site change record. Engineering project versions are retained and a second engineer verifies production-impacting parameter changes during qualification.",
+      "implementation_considerations": "Retain traceability from approved change through deployed configuration version."
+    },
+    {
+      "control_id": "PD.1.1",
+      "control_text": "Removable media use on Orion components must be restricted and controlled.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "USB storage is blocked by endpoint policy except approved encrypted media issued to engineering; media must be scanned before use.",
+      "implementation_considerations": "Vendor update needs should not create an unmonitored USB exception."
+    },
+    {
+      "control_id": "PD.1.2",
+      "control_text": "Physical access to Orion control and engineering components must be restricted to authorized personnel.",
+      "status_raw": "Compliant",
+      "type": "Risk Control",
+      "detailed_description": "The line and engineering workstation are within a badge-controlled production area; network cabinets are locked and access is limited to authorized operations and engineering staff.",
+      "implementation_considerations": "Physical restriction is an important compensating control for industrial interfaces that cannot identify individual users."
+    }
+  ],
+  "ground_truth_normalized": {
+    "individual_accounts_used": "Yes",
+    "shared_accounts_used": "No",
+    "shared_account_management": "N/A",
+    "service_accounts_used": "Yes",
+    "privileged_accounts_used": "Yes",
+    "privileged_credentials_managed": "Central Directory",
+    "access_review_frequency": "Quarterly",
+    "remote_access": "Restricted",
+    "supplier_remote_access": "No",
+    "mfa_for_remote_access": "Yes",
+    "central_logging": "Yes",
+    "central_patching": "Yes",
+    "vulnerability_scanning": "Yes",
+    "backup_enabled": "Yes",
+    "backup_restore_tested": "Yes",
+    "disaster_recovery_plan": "Yes",
+    "network_segmentation": "Yes",
+    "removable_media_restricted": "Yes",
+    "compensating_controls": "Strong"
+  },
+  "ground_truth_evidence": {
+    "individual_accounts_used": [
+      "AC.1.1",
+      "AC.2.1"
+    ],
+    "shared_accounts_used": [
+      "AC.1.1",
+      "AC.2.1"
+    ],
+    "shared_account_management": [
+      "AC.2.2"
+    ],
+    "service_accounts_used": [
+      "AC.2.3"
+    ],
+    "privileged_accounts_used": [
+      "AC.2.4"
+    ],
+    "privileged_credentials_managed": [
+      "AC.2.5"
+    ],
+    "access_review_frequency": [
+      "AC.1.4"
+    ],
+    "remote_access": [
+      "AC.3.1"
+    ],
+    "supplier_remote_access": [
+      "TP.1.1",
+      "TP.1.2"
+    ],
+    "mfa_for_remote_access": [
+      "AC.3.2"
+    ],
+    "central_logging": [
+      "LG.1.1",
+      "LG.1.2"
+    ],
+    "central_patching": [
+      "VM.1.1",
+      "VM.1.2"
+    ],
+    "vulnerability_scanning": [
+      "VM.1.3"
+    ],
+    "backup_enabled": [
+      "BC.1.1"
+    ],
+    "backup_restore_tested": [
+      "BC.1.2"
+    ],
+    "disaster_recovery_plan": [
+      "BC.2.1"
+    ],
+    "network_segmentation": [
+      "NW.1.1",
+      "NW.1.2"
+    ],
+    "removable_media_restricted": [
+      "PD.1.1"
+    ],
+    "compensating_controls": [
+      "AC.2.1",
+      "LG.1.2",
+      "PD.1.2"
+    ]
+  },
+  "security_outlier": false,
+  "deliberately_ambiguous": false
+}

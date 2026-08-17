@@ -44,7 +44,7 @@ if "api_authorized" not in st.session_state:
 
 with st.sidebar:
     st.header("Demo controls")
-    st.success("2 golden fixtures loaded")
+    st.success("10 synthetic assessments loaded")
     st.caption(f"Model: {settings.model}")
     st.subheader("Paid API access")
     if not settings.demo_access_code:
@@ -137,20 +137,20 @@ with dashboard_tab:
     metrics[0].metric("Sites", portfolio["sites"])
     metrics[1].metric("Controls", portfolio["controls"])
     metrics[2].metric("Assessments", portfolio["assessments"])
-    metrics[3].metric("Partial", portfolio["partial"])
+    metrics[3].metric("Exceptions", portfolio["partial"] + portfolio["not_compliant"])
     metrics[4].metric("QA findings", portfolio["review_findings"])
 
     status_frame = pd.DataFrame([dict(row) for row in status_by_section(connection)])
     chart_frame = status_frame.pivot(index="section", columns="status", values="count").fillna(0).astype(int)
-    for column in ["Compliant", "Partially Compliant", "Not Applicable"]:
+    for column in ["Compliant", "Partially Compliant", "Not Compliant", "Not Applicable"]:
         if column not in chart_frame:
             chart_frame[column] = 0
     left, right = st.columns([3, 2])
     with left:
         st.markdown("#### Assessment status by domain")
         st.bar_chart(
-            chart_frame[["Compliant", "Partially Compliant", "Not Applicable"]],
-            height=360, color=["#2E7D32", "#E9A23B", "#8B8F9A"],
+            chart_frame[["Compliant", "Partially Compliant", "Not Compliant", "Not Applicable"]],
+            height=360, color=["#2E7D32", "#E9A23B", "#C62828", "#8B8F9A"],
         )
     with right:
         st.markdown("#### What the demo proves")
@@ -185,15 +185,17 @@ with dashboard_tab:
 
     catalog_frame = pd.DataFrame([dict(row) for row in control_catalog_rows(connection)])
     priority_frame = catalog_frame[
-        (catalog_frame["partial"] > 0) | (catalog_frame["not_applicable"] > 0)
+        (catalog_frame["partial"] > 0) | (catalog_frame["not_compliant"] > 0)
+        | (catalog_frame["not_applicable"] > 0)
         | (catalog_frame["review_findings"] > 0)
     ].copy()
     priority_frame["Control"] = priority_frame["control_id"] + " · " + priority_frame["control_text"]
     st.markdown("#### Review queue")
     st.dataframe(
-        priority_frame[["Control", "section_prefix", "partial", "not_applicable", "review_findings"]].rename(
+        priority_frame[["Control", "section_prefix", "partial", "not_compliant", "not_applicable", "review_findings"]].rename(
             columns={"section_prefix": "Domain", "partial": "Partial",
-                     "not_applicable": "N/A", "review_findings": "QA findings"}
+                     "not_compliant": "Not compliant", "not_applicable": "N/A",
+                     "review_findings": "QA findings"}
         ),
         hide_index=True, width="stretch",
     )
@@ -264,7 +266,7 @@ with explorer_tab:
 with evidence_tab:
     st.subheader("Ask the source evidence")
     st.caption(
-        "Managed retrieval over the two synthetic ITRA PDFs. Answers show both cited files "
+        "Managed retrieval over the currently indexed synthetic ITRA PDFs. Answers show cited files "
         "and the retrieved evidence chunks."
     )
     rag_ready = paid_actions_ready and bool(settings.vector_store_id)

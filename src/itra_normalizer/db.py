@@ -25,6 +25,9 @@ def initialize(connection: sqlite3.Connection) -> None:
     }
     if "normalized_input_hash" not in columns:
         connection.execute("ALTER TABLE control_answers ADD COLUMN normalized_input_hash TEXT")
+    site_columns = {row[1] for row in connection.execute("PRAGMA table_info(sites)").fetchall()}
+    if "portfolio_cohort" not in site_columns:
+        connection.execute("ALTER TABLE sites ADD COLUMN portfolio_cohort TEXT")
 
 
 def _load_json(path: Path) -> Any:
@@ -36,6 +39,7 @@ def ingest_fixtures(
     connection: sqlite3.Connection,
     parsed_dir: Path | str = "data/parsed",
     catalog_path: Path | str = "data/control_catalog.json",
+    site_ids: set[str] | None = None,
 ) -> int:
     initialize(connection)
     catalog = _load_json(Path(catalog_path))
@@ -51,6 +55,8 @@ def ingest_fixtures(
     site_count = 0
     for fixture_path in sorted(Path(parsed_dir).glob("*.json")):
         payload = _load_json(fixture_path)
+        if site_ids is not None and payload["site_id"] not in site_ids:
+            continue
         _ingest_site(connection, payload)
         site_count += 1
     connection.commit()
@@ -58,17 +64,22 @@ def ingest_fixtures(
 
 
 def _ingest_site(connection: sqlite3.Connection, site: dict[str, Any]) -> None:
+    calibration_ids = {"SYN-001", "SYN-002", "SYN-003", "SYN-004", "SYN-009"}
+    cohort = site.get("portfolio_cohort") or (
+        "Calibration" if site["site_id"] in calibration_ids else "Validation"
+    )
     connection.execute(
-        """INSERT INTO sites(site_id, site_name, business_application, application_id, state)
-           VALUES (?, ?, ?, ?, ?)
+        """INSERT INTO sites(site_id, site_name, business_application, application_id, state, portfolio_cohort)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(site_id) DO UPDATE SET
              site_name=excluded.site_name,
              business_application=excluded.business_application,
              application_id=excluded.application_id,
-             state=excluded.state""",
+             state=excluded.state,
+             portfolio_cohort=excluded.portfolio_cohort""",
         (
             site["site_id"], site["site_name"], site.get("business_application"),
-            site.get("application_id"), site.get("state"),
+            site.get("application_id"), site.get("state"), cohort,
         ),
     )
     for control in site["controls"]:
@@ -149,6 +160,8 @@ def portfolio_summary(connection: sqlite3.Connection) -> sqlite3.Row:
              (SELECT COUNT(*) FROM control_answers
                WHERE status_raw = 'Partially Compliant') AS partial,
              (SELECT COUNT(*) FROM control_answers
+               WHERE status_raw = 'Not Compliant') AS not_compliant,
+             (SELECT COUNT(*) FROM control_answers
                WHERE status_raw = 'Not Applicable') AS not_applicable,
              (SELECT COUNT(*) FROM control_answers
                WHERE normalized_value_json IS NOT NULL) AS normalized,
@@ -181,12 +194,25 @@ def normalization_progress_by_section(connection: sqlite3.Connection) -> list[sq
     ).fetchall()
 
 
+def portfolio_sites(connection: sqlite3.Connection) -> list[sqlite3.Row]:
+    return connection.execute(
+        """SELECT s.*,
+                  COUNT(ca.control_id) AS control_count,
+                  SUM(CASE WHEN ca.normalized_value_json IS NOT NULL THEN 1 ELSE 0 END) AS normalized_count
+           FROM sites s
+           LEFT JOIN control_answers ca ON ca.site_id = s.site_id
+           GROUP BY s.site_id
+           ORDER BY s.site_id"""
+    ).fetchall()
+
+
 def control_catalog_rows(connection: sqlite3.Connection) -> list[sqlite3.Row]:
     return connection.execute(
         """SELECT cc.control_id, cc.section_prefix, cc.control_text,
                   COUNT(ca.site_id) AS site_count,
                   SUM(CASE WHEN ca.status_raw = 'Compliant' THEN 1 ELSE 0 END) AS compliant,
                   SUM(CASE WHEN ca.status_raw = 'Partially Compliant' THEN 1 ELSE 0 END) AS partial,
+                  SUM(CASE WHEN ca.status_raw = 'Not Compliant' THEN 1 ELSE 0 END) AS not_compliant,
                   SUM(CASE WHEN ca.status_raw = 'Not Applicable' THEN 1 ELSE 0 END) AS not_applicable,
                   SUM(CASE WHEN ca.needs_review = 1 THEN 1 ELSE 0 END) AS review_findings
            FROM control_catalog cc

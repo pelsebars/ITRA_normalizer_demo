@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS sites (
   site_name TEXT NOT NULL,
   business_application TEXT,
   application_id TEXT,
-  state TEXT
+  state TEXT,
+  portfolio_cohort TEXT
 );
 
 CREATE TABLE IF NOT EXISTS control_catalog (
