@@ -11,6 +11,7 @@ A functional vertical slice for normalizing synthetic IT Risk Assessments. Norma
 - Uses Responses API Structured Outputs with a Pydantic schema.
 - Persists normalized values, reconciliation, confidence, model/prompt version, and agreement rate.
 - Presents an executive portfolio dashboard, a control explorer, and raw-versus-normalized evidence in Streamlit.
+- Presents a guided stakeholder journey: Source Assessments, Standardized Answer Space, Analysis & Insights, and Ask & Explore.
 - Protects paid actions with an access code, server-side quotas, result caching, and a kill switch.
 - Records API calls and token usage in SQLite for demo-cost visibility.
 - Flags low agreement and reconciliation findings explicitly for QA review.
@@ -95,7 +96,7 @@ The script creates a new OpenAI vector store, uploads the synthetic PDFs, waits 
 
 ## Rebuild portfolio fixtures
 
-The eight additional fixtures are deterministically extracted from the common 13-page synthetic PDF template. The committed portfolio ground truth is retained separately for validation and is not used as source evidence by the application.
+The eight additional fixtures are deterministically extracted from the common 13-page synthetic PDF template. The committed portfolio ground truth is retained separately from source evidence. The stakeholder UI uses it explicitly as a synthetic benchmark for answer-space and portfolio demonstrations; actual persisted model mappings are labelled separately.
 
 ```bash
 python scripts/parse_portfolio_pdfs.py \
